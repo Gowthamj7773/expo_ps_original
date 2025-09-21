@@ -14,5 +14,5 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "nativewind-env.d.ts"
-, "app/course_details/SlotBook.jsx", "app/my_courses/CourseCard.jsx", "app/my_courses/MyCourses.jsx", "app/course_details/MaterialList.jsx", "app/course_details/CourseDetails.jsx", "app/index.jsx"  ]
+, "app/course_details/SlotBook.jsx", "app/my_courses/CourseCard.jsx", "app/my_courses/MyCourses.jsx", "app/course_details/MaterialList.jsx", "app/course_details/CourseDetails.jsx", "app/index.jsx", "app/course_details/BookSlot.jsx"  ]
 }

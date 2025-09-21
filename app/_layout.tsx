@@ -5,6 +5,7 @@ export default function RootLayout() {
           <Stack>
           <Stack.Screen name="my_courses/MyCourses" options={{ headerShown: false }} />
           <Stack.Screen name="course_details/CourseDetails" options={{ headerShown: false }} />
+          <Stack.Screen name="course_details/BookSlot" options={{ headerShown: false }} />
           </Stack>
   )
 }

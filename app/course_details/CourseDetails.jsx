@@ -1,13 +1,13 @@
-import { View, Text, Pressable, ScrollView, Linking, StyleSheet } from 'react-native';
-import MaterialList from './MaterialList';
-import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import UpArrow from '../assets/svg/UpArrow';
-import DownArrow from '../assets/svg/DownArrow';
+import { useEffect, useState } from 'react';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import YoutubePlayer from 'react-native-youtube-iframe';
+import MaterialList from './MaterialList';
+import { router } from 'expo-router';
 
 export default function CourseDetails() {
-    const materials = [
+    const materials =
+    [
         {
             "section": "Data Acquisition and Data Preprocessing",
             "completed": 1,
@@ -145,31 +145,11 @@ export default function CourseDetails() {
         }
     ];
 
-    const slotTiming = [
-        {id: 47555, label: "17 Sep 2025 (11:00 am - 01:00 pm)"} ,
-        {id: 47556, label: "18 Sep 2025 (02:00 pm - 04:00 pm)"},
-        {id: 47557, label: "19 Sep 2025 (11:00 am - 01:00 pm)"},
-        {id: 47558, label: "20 Sep 2025 (03:00 pm - 05:00 pm)"},
-        {id: 47559, label: "21 Sep 2025 (10:00 am - 12:00 pm)"}
-    ];
-
-    const slotVenue = {
-        "date": "2024-11-03",
-        "start_time": "00:00:00",
-        "end_time": "20:00:00",
-        "venue": "Vedanayagam Auditorium"
-    }
-
     const [courseName, setCourseName] = useState('');
     const [topBox, setTopBox] = useState(null);
-    const [isExpanded, setIsExpanded] = useState(false); // showing slots > 3
-    const [filterSlotTiming, setFilterSlotTiming] = useState([]);
-    const [selectSlot, setSelectSlot] = useState(-1); // for selecting slot option
-    const [bookingTime , setBookingTime] = useState(""); // for storing selected slot time
-
-    const [SlotBookedRes,setSlotBookedRes] = useState(""); // assuming response would be Maximum count reached or slot venue
+    const [materialsData, setMaterialsData] = useState(materials);
     
-    useEffect(() => {
+    useEffect(function() {
         async function getCourseNme() {
             try {
                 const res = await AsyncStorage.getItem('course_name');
@@ -181,19 +161,7 @@ export default function CourseDetails() {
         getCourseNme();
     }, []);
 
-    useEffect(() => {
-        function SeeVisibleSlots() {
-            if (slotTiming.length > 3) {
-                if (isExpanded) {
-                    setFilterSlotTiming(slotTiming);
-                } else {
-                    setFilterSlotTiming(slotTiming.slice(0, 3));
-                }
-            } else {
-                setFilterSlotTiming(slotTiming);
-            }
-        }
-        
+    useEffect(function() {
         if (materials) {
             if (materials[0]['topics'][0].type === 'text') {
                 materials[0]['topics'][0].content = decodeHtmlContentAdvanced(materials[0]['topics'][0].content);
@@ -202,21 +170,37 @@ export default function CourseDetails() {
                 setTopBox(materials[0]['topics']);
             }
         }
-        SeeVisibleSlots();
-    }, [isExpanded]);
+    }, []);
 
-
-    const getYouTubeVideoId = (url) => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
-    };
+    function getYouTubeVideoId(url) {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    }
 
     function handleTopBox(json) {
         if (json.type === 'text') {
             json.content = decodeHtmlContentAdvanced(json.content);
         }
         setTopBox([json]);
+    }
+
+    function updateMaterialCompletion(sectionIndex, topicIndex, completed) {
+        const updatedMaterials = [...materialsData];
+        updatedMaterials[sectionIndex].topics[topicIndex].completed = completed;
+        
+        // Update section completed count
+        const completedCount = updatedMaterials[sectionIndex].topics.filter(topic => topic.completed).length;
+        updatedMaterials[sectionIndex].completed = completedCount;
+        
+        setMaterialsData(updatedMaterials);
+    }
+
+    function calculateOverallProgress() {
+        const totalTopics = materialsData.reduce((acc, section) => acc + section.topics.length, 0);
+        const completedTopics = materialsData.reduce((acc, section) => 
+            acc + section.topics.filter(topic => topic.completed).length, 0);
+        return Math.round((completedTopics / totalTopics) * 100);
     }
 
     function decodeHtmlContentAdvanced(htmlContent, options = {}) {
@@ -232,7 +216,6 @@ export default function CourseDetails() {
         }
 
         let decoded = htmlContent
-            // Decode unicode escapes
             .replace(/\\u003c/g, '<')
             .replace(/\\u003e/g, '>')
             .replace(/\\u0026/g, '&')
@@ -242,7 +225,6 @@ export default function CourseDetails() {
             .replace(/\\n/g, '\n')
             .replace(/\\r/g, '\n');
 
-        // Handle bold tags based on preference
         if (preserveBold) {
             decoded = decoded.replace(/<b>(.*?)<\/b>/gi, '**$1**');
             decoded = decoded.replace(/<strong>(.*?)<\/strong>/gi, '**$1**');
@@ -251,7 +233,6 @@ export default function CourseDetails() {
             decoded = decoded.replace(/<strong>(.*?)<\/strong>/gi, '$1');
         }
 
-        // Handle italic tags
         if (preserveItalic) {
             decoded = decoded.replace(/<i>(.*?)<\/i>/gi, '*$1*');
             decoded = decoded.replace(/<em>(.*?)<\/em>/gi, '*$1*');
@@ -260,7 +241,6 @@ export default function CourseDetails() {
             decoded = decoded.replace(/<em>(.*?)<\/em>/gi, '$1');
         }
 
-        // Continue with other replacements
         decoded = decoded
             .replace(/<br\s*\/?>/gi, '\n')
             .replace(/<p>/gi, '\n')
@@ -277,7 +257,6 @@ export default function CourseDetails() {
             .replace(/&#39;/g, "'")
             .replace(/&apos;/g, "'");
 
-        // Clean up formatting
         if (removeExtraSpaces) {
             decoded = decoded
                 .replace(/\n\s*\n/g, '\n')
@@ -288,17 +267,13 @@ export default function CourseDetails() {
         return decoded;
     }
 
-    // Check if SlotBookedRes is an object (venue details) or string (error/empty)
-    const isSlotBooked = SlotBookedRes && typeof SlotBookedRes === 'object' && SlotBookedRes.venue;
-
     return (
-        <ScrollView style={styles.container}>
+        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
             <View style={styles.topBox}>
                 {topBox && (
                     <View>
-                        <Text style={styles.topBoxTitle}>{topBox[0]?.title}</Text>
                         {topBox[0]?.type === 'youtube' ? (
-                        <YoutubePlayer height={200} videoId={getYouTubeVideoId(topBox[0]?.content)} />
+                        <YoutubePlayer height={190} videoId={getYouTubeVideoId(topBox[0]?.content)} />
                         ) : topBox[0]?.type === 'link' ? (
                             <Pressable
                                 onPress={() => Linking.openURL(`${topBox[0]?.content}`)}
@@ -309,90 +284,41 @@ export default function CourseDetails() {
                         ) : (
                             <Text>{topBox[0]?.content}</Text>
                         )}
-                        {topBox[0]?.completed === false && (
-                            <Pressable
-                                onPress={() => {
-                                    if (topBox && topBox[0]) {
-                                        const updated = [{ ...topBox[0], completed: true }];
-                                        setTopBox(updated);
-                                    }
-                                }}
-                                style={styles.actionButton}
-                            >
-                                <Text style={styles.actionButtonText}>Mark as Complete</Text>
-                            </Pressable>
-                        )}
                     </View>
                 )}
             </View>
 
-            {/* showing course details */}
+            {/* Course Details with Progress Bar */}
             <View style={styles.courseDetailsContainer}>
                 <Text style={styles.courseDetailsTitle}>Course Details</Text>
                 <Text style={styles.courseName}>{courseName}</Text>
+                
+                <View style={styles.progressContainer}>
+                    <View style={styles.progressBar}>
+                        <View style={[styles.progressFill, { width: `${calculateOverallProgress()}%` }]} />
+                    </View>
+                    <Text style={styles.progressText}>{calculateOverallProgress()}%</Text>
+                </View>
             </View>
             
-            <View style={styles.materialsContainer}>
-                <Text style={styles.sectionTitle}>Course Materials</Text>
-                {materials.map((item, id) => (
+            <View className='mt-5'>
+                {materialsData.map((item, id) => (
                     <View key={id}>
                         <MaterialList
                             serialNum={id + 1}
                             details={item}
+                            sectionIndex={id}
                             HandleTopBox={handleTopBox}
+                            updateMaterialCompletion={updateMaterialCompletion}
+                            isFirst={id === 0}
+                            isLast={id === materialsData.length - 1}
                         />
-                        {id < materials?.length-1 && <View style={styles.separator} />}
                     </View>
                 ))}
             </View>
-
-            {!isSlotBooked ?
-            <View style={styles.courseDetailsContainer}>
-                <Text style={styles.courseDetailsTitle}>Available Slots</Text>
-                    {typeof SlotBookedRes === 'string' && SlotBookedRes && <Text className='text-center text-red-500'>{SlotBookedRes}</Text>}
-                    {slotTiming.length>0 ?
-                    <View>
-                        
-                        {
-                        filterSlotTiming.map((item, id) => (
-                            <Pressable onPress={() => {setSelectSlot(id) ; setBookingTime(item.label)}} key={id} className={` ${selectSlot === id ? 'border-primary bg-secondary border-[2px] p-[17px] ': 'border-gray-200 bg-background border p-[18px]'} my-2   rounded-lg`}>
-                                <Text>{item.label}</Text>
-                            </Pressable>
-                        ))}
-                        
-                        {slotTiming.length > 3 && (
-                            <Pressable className='flex-row items-center justify-center' onPress={() => setIsExpanded(!isExpanded)}>
-                                <Text className=' my-3 font-medium text-gray-500 text-lg'>
-                                    {isExpanded ? 'Show Less' : `Show More (${slotTiming.length - 3})`}
-                                </Text>
-                                {isExpanded?<UpArrow color='gray'/>:<DownArrow color='gray'/>}
-                            </Pressable>
-                        )
-                        }
-                    </View>
-                    :
-                    <View className={'border-gray-200 bg-background border p-[15px] my-2 rounded-lg '}>
-                        <Text className='text-center text-[16px] text-gray-500'>No slots available</Text>
-                    </View>
-                    } 
-                
-                <Pressable onPress={()=>bookingTime ? setSlotBookedRes(slotVenue) : setSlotBookedRes("select a slot")} style={styles.bookSlotButton}>
-                    <Text style={styles.bookSlotButtonText}>Book a Slot</Text>
-                </Pressable>
-            </View>
-            :
-            <View className='mb-[10%]'>
-                <View style={styles.courseDetailsContainer}>
-                    <Text className='text-primary text-[16px] font-medium'>Slot Booked Successfully</Text>
-                    <Text className='text-gray-500 text-[16px] font-medium my-2'>Assessment Date</Text>
-                    <Text className='mb-2 font-medium text-[16px]'>{slotVenue?.date}</Text>
-                    <Text className='text-gray-500 text-[16px] font-medium my-2'>Assessment Timings</Text>
-                    <Text className='mb-2 font-medium text-[16px]'>{slotVenue?.start_time}  TO  {slotVenue?.end_time}</Text>
-                    <Text className='text-gray-500 text-[16px] font-medium my-2'>Assessment Venue</Text>
-                    <Text className='mb-2 font-medium text-[16px]'>{slotVenue?.venue}</Text>
-                </View>
-            </View>
-            }
+            <Pressable onPress={()=>router.push("/course_details/BookSlot")} className='bg-primary my-5 p-3 py-4 rounded-lg'>
+                <Text className='text-center font-medium text-[16px] text-white'>Book a Slot</Text>
+            </Pressable>
         </ScrollView>
     );
 }
@@ -409,12 +335,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         marginTop: 60,
         marginBottom: 8,
-        padding: 20,
-    },
-    topBoxTitle: {
-        marginVertical: 10,
-        fontWeight: '500',
-        fontSize: 16,
+        padding: 10,
     },
     actionButton: {
         marginVertical: 10,
@@ -462,17 +383,28 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         fontSize: 16,
     },
-    bookSlotButton: {
-        backgroundColor: '#7D53F6',
-        paddingVertical: 14,
-        borderRadius: 8,
-        marginVertical: 8,
-        marginTop:18
+    progressContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 15,
+        gap: 10,
     },
-    bookSlotButtonText: {
-        textAlign: 'center',
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '500',
+    progressBar: {
+        flex: 1,
+        height: 8,
+        backgroundColor: '#ECE8FE',
+        borderRadius: 4,
+        overflow: 'hidden',
+    },
+    progressFill: {
+        height: '100%',
+        backgroundColor: '#7D53F6',
+        borderRadius: 4,
+    },
+    progressText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#7D53F6',
+        minWidth: 35,
     },
 });
